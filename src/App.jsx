@@ -67,6 +67,16 @@ function ChatInterface() {
   const [loading, setLoading] = useState(false)
   const [totalCost, setTotalCost] = useState(0)
   const bottomRef = useRef(null)
+  const [usage, setUsage] = useState(null)
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      const response = await fetch('http://localhost:8000/usage')
+      const data = await response.json()
+      setUsage(data)
+    }
+    fetchUsage()
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -79,18 +89,12 @@ function ChatInterface() {
     setInput('')
     setLoading(true)
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
-          system: 'You are a know it all and can accomplish anything for me, you are my babe, my best mate and you know everything about me.',
           messages: [...messages, newMessage]
         })
       })
@@ -123,9 +127,9 @@ function ChatInterface() {
             <div style={styles.name}>Tomoro Assistant</div>
             <div style={styles.status}>● online</div>
           </div>
-          <div style={{ marginLeft: 'auto', fontSize: '11px', color: colors.muted, fontFamily: 'monospace' }}>
-              ${totalCost.toFixed(6)}
-            </div>
+         <div style={{ marginLeft: 'auto', fontSize: '11px', color: colors.muted, fontFamily: 'monospace', textAlign: 'right' }}>
+          <div style={{ color: colors.tomoroGreen }}>${usage ? usage.remaining.toFixed(4) : '...'}<span style={{ color: colors.muted }}> Remaining</span></div>
+        </div>
         </div>
         <div style={styles.messages}>
           {messages.map((msg, i) => <Message key={i} role={msg.role} content={msg.content} />)}
