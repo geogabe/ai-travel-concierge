@@ -39,6 +39,7 @@ function Message({ role, content }) {
         border: isUser ? 'none' : '1px solid rgba(255,255,255,0.06)',
         fontSize: '13px',
         lineHeight: '1.5',
+        overflow: 'hidden',
       }}>
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
@@ -119,7 +120,14 @@ function ChatInterface() {
 
   return (
     <div style={styles.page}>
-      <style>{`@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }`}</style>
+      <style>{`
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }
+  .prose h1, .prose h2, .prose h3 { font-size: 14px; font-weight: 600; margin: 4px 0; }
+  .prose p { margin: 4px 0; }
+  .prose ul { padding-left: 16px; margin: 4px 0; }
+  .prose li { margin: 2px 0; }
+  .prose strong { font-weight: 600; }
+`}</style>
       <div style={styles.window}>
         <div style={styles.header}>
           <div style={styles.avatar}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-backpack4" viewBox="0 0 16 16">
