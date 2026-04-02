@@ -71,7 +71,7 @@ function ChatInterface() {
 
   useEffect(() => {
     const fetchUsage = async () => {
-      const response = await fetch('http://localhost:8000/usage')
+      const response = await fetch('https://ai-travel-concierge-backend-production.up.railway.app/usage')
       const data = await response.json()
       setUsage(data)
     }
@@ -89,7 +89,7 @@ function ChatInterface() {
     setInput('')
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch('https://ai-travel-concierge-backend-production.up.railway.app/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
