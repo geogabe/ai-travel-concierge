@@ -13,10 +13,12 @@ const colors = {
   muted: '#6b6a65',
 }
 
-function Message({ role, content }) {
+// ─── Message bubble ────────────────────────────────────────────────────────────
+
+function Message({ role, content, usedWebSearch }) {
   const isUser = role === 'user'
   return (
-    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: '4px' }}>
       <div className="prose" style={{
         maxWidth: '75%',
         padding: '10px 14px',
@@ -33,19 +35,87 @@ function Message({ role, content }) {
       }}>
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
+
+      {/* Web search badge — shown below assistant messages that used live data */}
+      {!isUser && usedWebSearch && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontSize: '10px',
+          color: colors.muted,
+          padding: '2px 8px',
+          borderRadius: '20px',
+          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(255,255,255,0.03)',
+        }}>
+          <span style={{ fontSize: '10px' }}>🔍</span>
+          <span>Searched the web</span>
+        </div>
+      )}
     </div>
   )
 }
 
-function TypingIndicator() {
+// ─── Thinking / searching indicator ───────────────────────────────────────────
+
+function ThinkingIndicator({ status }) {
+  // status: 'thinking' | 'searching'
+  const isSearching = status === 'searching'
+
   return (
-    <div style={{ display: 'flex', gap: '4px', padding: '12px 14px', background: '#1e1e20', borderRadius: '12px', borderBottomLeftRadius: '4px', border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content' }}>
-      {[0, 1, 2].map(i => (
-        <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6b6a65', animation: `bounce 1.2s infinite ${i * 0.2}s` }} />
-      ))}
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '10px 14px',
+      background: '#1e1e20',
+      borderRadius: '12px',
+      borderBottomLeftRadius: '4px',
+      border: '1px solid rgba(255,255,255,0.06)',
+      width: 'fit-content',
+      transition: 'all 0.3s ease',
+    }}>
+      {isSearching ? (
+        // Searching state — pulsing globe
+        <>
+          <div style={{
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            background: 'rgba(0,255,136,0.15)',
+            border: '1.5px solid #00ff88',
+            animation: 'pulse 1.5s ease-in-out infinite',
+            flexShrink: 0,
+          }} />
+          <span style={{
+            fontSize: '12px',
+            color: '#00ff88',
+            fontFamily: 'monospace',
+            letterSpacing: '0.02em',
+          }}>
+            Searching the web...
+          </span>
+        </>
+      ) : (
+        // Thinking state — classic dots
+        <>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: '#6b6a65',
+              animation: `bounce 1.2s infinite ${i * 0.2}s`,
+            }} />
+          ))}
+        </>
+      )}
     </div>
   )
 }
+
+// ─── Sidebar ───────────────────────────────────────────────────────────────────
 
 function Sidebar({ sessions, activeSessionId, onSelect, onNew, onDelete }) {
   return (
@@ -114,6 +184,8 @@ function Sidebar({ sessions, activeSessionId, onSelect, onNew, onDelete }) {
   )
 }
 
+// ─── Main chat ─────────────────────────────────────────────────────────────────
+
 function ChatInterface() {
   const [sessionId, setSessionId] = useState(() => uuidv4())
   const [messages, setMessages] = useState([
@@ -122,8 +194,10 @@ function ChatInterface() {
   const [sessions, setSessions] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [thinkingStatus, setThinkingStatus] = useState('thinking') // 'thinking' | 'searching'
   const [usage, setUsage] = useState(null)
   const bottomRef = useRef(null)
+  const searchTimerRef = useRef(null)
 
   const fetchUsage = async () => {
     const res = await fetch(`${API}/usage`)
@@ -144,7 +218,7 @@ function ChatInterface() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
 
   const startNewConversation = () => {
     setSessionId(uuidv4())
@@ -168,11 +242,18 @@ function ChatInterface() {
   }
 
   const sendMessage = async () => {
-    if (!input.trim()) return
+    if (!input.trim() || loading) return
     const newMessage = { role: 'user', content: input }
     setMessages(prev => [...prev, newMessage])
     setInput('')
     setLoading(true)
+    setThinkingStatus('thinking')
+
+    // After 2s with no reply, flip to "searching" state
+    searchTimerRef.current = setTimeout(() => {
+      setThinkingStatus('searching')
+    }, 2000)
+
     try {
       const response = await fetch(`${API}/chat`, {
         method: 'POST',
@@ -182,23 +263,43 @@ function ChatInterface() {
           messages: [...messages, newMessage]
         })
       })
+
       if (!response.ok) throw new Error('API error')
       const data = await response.json()
       const reply = data.content[0].text
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      const usedWebSearch = data.used_web_search || false
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: reply,
+        usedWebSearch,
+      }])
+
       fetchUsage()
       fetchSessions()
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Hmmm, it seems like I got lost in translation!' }])
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Something went wrong — try again in a moment.',
+      }])
     } finally {
+      clearTimeout(searchTimerRef.current)
       setLoading(false)
+      setThinkingStatus('thinking')
     }
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0e0e0f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
       <style>{`
-        @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-4px); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.85); }
+        }
         .prose h1, .prose h2, .prose h3 { font-size: 14px; font-weight: 600; margin: 4px 0; }
         .prose p { margin: 4px 0; }
         .prose ul { padding-left: 16px; margin: 4px 0; }
@@ -217,6 +318,7 @@ function ChatInterface() {
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+
           {/* Header */}
           <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: colors.tomoroGreen, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a1535' }}>
@@ -227,17 +329,24 @@ function ChatInterface() {
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: '500', color: '#e8e6e0' }}>Ecotravel advisor</div>
-              <div style={{ fontSize: '11px', color: '#5dcaa5', marginTop: '2px' }}>● online</div>
+              <div style={{ fontSize: '11px', color: loading ? '#00ff88' : '#5dcaa5', marginTop: '2px', transition: 'color 0.3s' }}>
+                {loading ? (thinkingStatus === 'searching' ? '● searching...' : '● thinking...') : '● online'}
+              </div>
             </div>
             <div style={{ marginLeft: 'auto', fontSize: '11px', color: colors.muted, fontFamily: 'monospace', textAlign: 'right' }}>
-              <div style={{ color: colors.tomoroGreen }}>${usage ? usage.remaining.toFixed(4) : '...'}<span style={{ color: colors.muted }}> Remaining</span></div>
+              <div style={{ color: colors.tomoroGreen }}>
+                ${usage ? usage.remaining.toFixed(4) : '...'}
+                <span style={{ color: colors.muted }}> Remaining</span>
+              </div>
             </div>
           </div>
 
           {/* Messages */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {messages.map((msg, i) => <Message key={i} role={msg.role} content={msg.content} />)}
-            {loading && <TypingIndicator />}
+            {messages.map((msg, i) => (
+              <Message key={i} role={msg.role} content={msg.content} usedWebSearch={msg.usedWebSearch} />
+            ))}
+            {loading && <ThinkingIndicator status={thinkingStatus} />}
             <div ref={bottomRef} />
           </div>
 
@@ -249,14 +358,27 @@ function ChatInterface() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               placeholder="Hi Geoffroy, how can I help you today?..."
+              disabled={loading}
             />
             <button
-              style={{ background: colors.tomoroGreen, border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: '500', color: '#1a1535', cursor: 'pointer' }}
+              style={{
+                background: loading ? 'rgba(0,255,136,0.4)' : colors.tomoroGreen,
+                border: 'none',
+                borderRadius: '10px',
+                padding: '9px 16px',
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#1a1535',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s',
+              }}
               onClick={sendMessage}
+              disabled={loading}
             >
-              Send
+              {loading ? '...' : 'Send'}
             </button>
           </div>
+
         </div>
       </div>
     </div>
