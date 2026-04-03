@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { v4 as uuidv4 } from 'uuid'
 
 const colors = {
   tomoroGreen: '#00ff88',
@@ -40,7 +41,7 @@ function Message({ role, content }) {
         fontSize: '13px',
         lineHeight: '1.5',
         overflow: 'hidden',
-      }}>
+      }}className="prose">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
     </div>
@@ -61,6 +62,7 @@ function TypingIndicator() {
 }
 
 function ChatInterface() {
+  const [sessionId] = useState(() => uuidv4())
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hi Geoffroy — how can I help you today?' }
   ])
@@ -96,6 +98,7 @@ function ChatInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          session_id: sessionId,
           messages: [...messages, newMessage]
         })
       })
