@@ -738,7 +738,148 @@
   .itinerary-card .leaflet-tile-pane {
     filter: saturate(0.15) sepia(0.2) brightness(1.02);
   }
+  
+  .itinerary-timeline {
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--space-5);
+    padding: 0 var(--space-2);
+  }
 
+  .itinerary-stop {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 0 var(--space-4);
+    position: relative;
+  }
+
+  .itinerary-stop__spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .itinerary-stop__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-terracotta);
+    border: 2px solid var(--color-oyster);
+    box-shadow: var(--neu-raised-sm);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .itinerary-stop__line {
+    width: 2px;
+    flex: 1;
+    background-color: var(--color-sand-light);
+    margin: var(--space-1) 0;
+    min-height: var(--space-5);
+  }
+
+  .itinerary-stop__content {
+    background-color: var(--color-oyster);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    box-shadow: var(--neu-raised-sm);
+    margin-bottom: var(--space-3);
+  }
+
+  .itinerary-stop__city {
+    font-family: var(--font-title);
+    font-style: italic;
+    font-size: var(--text-2xl);
+    font-weight: 500;
+    color: var(--color-ink);
+    line-height: var(--leading-tight);
+  }
+
+  .itinerary-stop__dates {
+    font-size: var(--text-sm);
+    color: var(--color-sage);
+    margin-top: 2px;
+    margin-bottom: var(--space-3);
+  }
+
+  .itinerary-stop__details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .itinerary-stop__row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-ink-light);
+  }
+
+  .itinerary-stop__row-label {
+    font-size: var(--text-xs);
+    color: var(--color-sage);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    min-width: 90px;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .itinerary-stop__highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+  }
+
+  .itinerary-stop__highlight {
+    font-size: var(--text-xs);
+    color: var(--color-truffle);
+    background-color: var(--color-oyster);
+    border-radius: var(--radius-full);
+    padding: 2px var(--space-3);
+    box-shadow: var(--neu-raised-sm);
+  }
+
+  .itinerary-leg {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-3);
+    margin-left: 4px;
+  }
+
+  .itinerary-leg__icon {
+    font-size: var(--text-lg);
+  }
+
+  .itinerary-leg__details {
+    display: flex;
+    gap: var(--space-4);
+    font-size: var(--text-xs);
+    color: var(--color-sage-dark);
+  }
+
+  .itinerary-leg__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .itinerary-leg__stat-value {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semi);
+    color: var(--color-ink);
+  }
+
+  .itinerary-leg__stat-label {
+    font-size: 10px;
+    color: var(--color-sage);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 /* ============================================================
    UTILITIES
    ============================================================ */

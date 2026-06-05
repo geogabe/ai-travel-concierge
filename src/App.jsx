@@ -235,6 +235,75 @@ function ThinkingDots() {
   )
 }
 
+// ─── Itinerary timeline ─────────────────────────────────────────────────────────────
+
+
+
+function ItineraryTimeline({ stops }) {
+  return (
+    <div className="itinerary-timeline">
+      {stops.map((stop, index) => (
+        <div key={stop.city}>
+          {/* Transport leg from previous stop */}
+          {stop.transport_from_previous && (
+            <div className="itinerary-leg">
+              <span className="itinerary-leg__icon">
+                {stop.transport_from_previous.icon}
+              </span>
+              <div className="itinerary-leg__details">
+                <div className="itinerary-leg__stat">
+                  <span className="itinerary-leg__stat-value">{stop.transport_from_previous.duration}</span>
+                  <span className="itinerary-leg__stat-label">Durée</span>
+                </div>
+                <div className="itinerary-leg__stat">
+                  <span className="itinerary-leg__stat-value">{stop.transport_from_previous.cost} €</span>
+                  <span className="itinerary-leg__stat-label">Coût</span>
+                </div>
+                <div className="itinerary-leg__stat">
+                  <span className="itinerary-leg__stat-value">{stop.transport_from_previous.co2} kg</span>
+                  <span className="itinerary-leg__stat-label">CO₂</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stop card */}
+          <div className="itinerary-stop">
+            <div className="itinerary-stop__spine">
+              <div className="itinerary-stop__dot" />
+              {index < stops.length - 1 && (
+                <div className="itinerary-stop__line" />
+              )}
+            </div>
+            <div className="itinerary-stop__content">
+              <div className="itinerary-stop__city">{stop.city}</div>
+              <div className="itinerary-stop__dates">
+                {stop.dates} · {stop.nights} nuit{stop.nights > 1 ? 's' : ''}
+              </div>
+              <div className="itinerary-stop__details">
+                <div className="itinerary-stop__row">
+                  <span className="itinerary-stop__row-label">Hébergement</span>
+                  <span>{stop.accommodation}</span>
+                </div>
+                {stop.highlights?.length > 0 && (
+                  <div className="itinerary-stop__row">
+                    <span className="itinerary-stop__row-label">À voir</span>
+                    <div className="itinerary-stop__highlights">
+                      {stop.highlights.map(h => (
+                        <span key={h} className="itinerary-stop__highlight">{h}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Message ───────────────────────────────────────────────────────────────────
 
 function Message({ role, content, toolsUsed = [], cards = null, itinerary = null }) {
@@ -274,7 +343,10 @@ function ItineraryCard({ data, narrative }) {
       <div className="itinerary-card__header">
         <h2 className="itinerary-card__title">{data.title}</h2>
       </div>
-      <TripMap stops={data.stops} />
+      <div className="itinerary-card__map">
+        <TripMap stops={data.stops} />
+      </div>
+      <ItineraryTimeline stops={data.stops} />
       {narrative && (
         <div className="itinerary-card__narrative">
           <ReactMarkdown>{narrative}</ReactMarkdown>
