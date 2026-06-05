@@ -722,6 +722,20 @@
   .transport-option__carbon-fill--high { background-color: var(--color-terracotta); }
 }
 
+  /* ----------------------------------------------------------
+     itinerary CARD
+     Block: .itinerary-card
+     ---------------------------------------------------------- */
+
+ .itinerary-card {
+    width: 100%;
+    background-color: var(--color-oyster);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    box-shadow: var(--neu-raised-lg);
+    animation: fadeUp 0.3s ease forwards;
+  }
+
 /* ============================================================
    UTILITIES
    ============================================================ */

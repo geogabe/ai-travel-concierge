@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { v4 as uuidv4 } from 'uuid'
 import './styles.css'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -177,6 +179,38 @@ function TransportCard({ data, narrative }) {
   )
 }
 
+// ─── itinerary map card ─────────────────────────────────────────────────────────────
+
+function TripMap({ stops }) {
+  const mapRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return
+
+    const map = L.map(mapRef.current).setView(
+      [stops[0].lat, stops[0].lng], 5
+    )
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map)
+
+    stops.forEach(stop => {
+      L.marker([stop.lat, stop.lng])
+        .addTo(map)
+        .bindPopup(stop.city)
+    })
+
+    const coords = stops.map(s => [s.lat, s.lng])
+    L.polyline(coords, { color: '#C47457', weight: 2 }).addTo(map)
+
+    mapInstanceRef.current = map
+  }, [stops])
+
+  return <div ref={mapRef} style={{ height: '240px', borderRadius: '16px' }} />
+}
+
 // ─── Thinking dots ─────────────────────────────────────────────────────────────
 
 function ThinkingDots() {
@@ -191,7 +225,7 @@ function ThinkingDots() {
 
 // ─── Message ───────────────────────────────────────────────────────────────────
 
-function Message({ role, content, toolsUsed = [], cards = null }) {
+function Message({ role, content, toolsUsed = [], cards = null, itinerary = null }) {
   const isUser = role === 'user'
   return (
     <div className="message">
@@ -204,14 +238,36 @@ function Message({ role, content, toolsUsed = [], cards = null }) {
         <TransportCard data={cards} narrative={content} />
       )}
 
+      {!isUser && itinerary?.type === 'itinerary' && (
+        <ItineraryCard data={itinerary} narrative={content} />
+      )}
+
       {/* Only render bubble if no cards */}
-      {(isUser || !cards) && (
+      {(isUser || (!cards && !itinerary)) && (
         <div className={`message__bubble ${isUser ? 'message__bubble--user' : 'message__bubble--assistant'}`}>
           {isUser ? content : <ReactMarkdown>{content}</ReactMarkdown>}
         </div>
       )}
 
       {!isUser && <ToolBadges toolsUsed={toolsUsed} />}
+
+      
+    </div>
+  )
+}
+
+function ItineraryCard({ data, narrative }) {
+  return (
+    <div className="itinerary-card">
+      <div className="itinerary-card__header">
+        <h2 className="itinerary-card__title">{data.title}</h2>
+      </div>
+      <TripMap stops={data.stops} />
+      {narrative && (
+        <div className="itinerary-card__narrative">
+          <ReactMarkdown>{narrative}</ReactMarkdown>
+        </div>
+      )}
     </div>
   )
 }
@@ -365,6 +421,7 @@ export default function App() {
         content: reply,
         toolsUsed: data.tools_used || [],
         cards: data.cards || null,
+        itinerary: data.itinerary || null,
       }])
       fetchUsage(); fetchSessions()
     } catch {
@@ -395,10 +452,7 @@ export default function App() {
       <main className={`chat ${!sidebarOpen ? 'chat--offset' : ''}`}>
         <div className="chat__messages">
           {messages.map((msg, i) => (
-            <Message
-              key={i} role={msg.role} content={msg.content}
-              toolsUsed={msg.toolsUsed} cards={msg.cards}
-            />
+            <Message key={i} role={msg.role} content={msg.content} toolsUsed={msg.toolsUsed} cards={msg.cards} itinerary={msg.itinerary} />
           ))}
           {loading && <ThinkingDots />}
           <div ref={bottomRef} />
