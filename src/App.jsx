@@ -1,388 +1,437 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { v4 as uuidv4 } from 'uuid'
+import './styles.css'
 
-const API = 'https://ai-travel-concierge-backend-production.up.railway.app'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-const colors = {
-  tomoroGreen: '#00ff88',
-  bg: '#0e0e0f',
-  surface: '#1e1e20',
-  border: 'rgba(255,255,255,0.08)',
-  text: '#e8e6e0',
-  muted: '#6b6a65',
+
+// ─── Category detection ────────────────────────────────────────────────────────
+
+function detectCategory(title = '') {
+  const s = title.toLowerCase()
+  if (/hôtel|gîte|logement|chambre|accommodation|airbnb|homexchange|nuit/.test(s)) return 'accommodation'
+  if (/voyage|itinéraire|trip|planif|semaine|jours|circuit/.test(s)) return 'trip'
+  if (/destination|où|partir|visiter|découvrir/.test(s)) return 'destination'
+  return 'default'
 }
 
-// ─── Message bubble ────────────────────────────────────────────────────────────
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
 
-function Message({ role, content, usedWebSearch }) {
-  const isUser = role === 'user'
+function IconToggle() {
   return (
-    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: '4px' }}>
-      <div className="prose" style={{
-        maxWidth: '75%',
-        padding: '10px 14px',
-        textAlign: 'left',
-        borderRadius: '12px',
-        borderBottomRightRadius: isUser ? '4px' : '12px',
-        borderBottomLeftRadius: isUser ? '12px' : '4px',
-        background: isUser ? colors.tomoroGreen : '#1e1e20',
-        color: isUser ? '#1a1535' : '#e8e6e0',
-        border: isUser ? 'none' : '1px solid rgba(255,255,255,0.06)',
-        fontSize: '13px',
-        lineHeight: '1.5',
-        overflow: 'hidden',
-      }}>
-        <ReactMarkdown>{content}</ReactMarkdown>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M3 6h18M3 12h18M3 18h18"/>
+    </svg>
+  )
+}
+
+function IconDestination() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21C12 21 5 13.5 5 9a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/>
+      <circle cx="12" cy="9" r="2.5"/>
+    </svg>
+  )
+}
+
+function IconTrip() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2"/>
+      <path d="M3 9h18M8 5V3M16 5V3M7 13h2M11 13h2M15 13h2"/>
+    </svg>
+  )
+}
+
+function IconAccommodation() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21V9l9-6 9 6v12M9 21V15h6v6"/>
+    </svg>
+  )
+}
+
+function IconDefault() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  )
+}
+
+function CategoryIcon({ title }) {
+  const cat = detectCategory(title)
+  if (cat === 'destination')   return <IconDestination />
+  if (cat === 'trip')          return <IconTrip />
+  if (cat === 'accommodation') return <IconAccommodation />
+  return <IconDefault />
+}
+
+// ─── Tool badges ───────────────────────────────────────────────────────────────
+
+const TOOL_META = {
+  search_trains:    { label: 'Trains',  icon: '🚆' },
+  search_driving:   { label: 'Voiture', icon: '🚗' },
+  calculate_carbon: { label: 'Carbone', icon: '🌿' },
+  web_search:       { label: 'Web',     icon: '🔍' },
+}
+
+function ToolBadges({ toolsUsed = [] }) {
+  const unique = [...new Set(toolsUsed)].filter(t => TOOL_META[t])
+  if (!unique.length) return null
+  return (
+    <div className="message__badges">
+      {unique.map(tool => (
+        <span key={tool} className="tool-badge">
+          {TOOL_META[tool].icon} {TOOL_META[tool].label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ─── Transport card ────────────────────────────────────────────────────────────
+
+function CarbonBar({ co2, co2Max }) {
+  const pct = Math.min(100, Math.round((co2 / co2Max) * 100))
+  const cls = pct < 20 ? 'low' : pct < 60 ? 'mid' : 'high'
+  return (
+    <div className="transport-option__carbon-bar">
+      <div
+        className={`transport-option__carbon-fill transport-option__carbon-fill--${cls}`}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}
+
+function TransportOption({ option }) {
+  const isRecommended = option.badge === 'recommended'
+  return (
+    <div className={`transport-option ${isRecommended ? 'transport-option--recommended' : ''}`}>
+      {option.badge && (
+        <span className={`transport-option__badge transport-option__badge--${option.badge}`}>
+          {option.badgeLabel}
+        </span>
+      )}
+
+      <div className="transport-option__mode">
+        <div className="transport-option__icon" aria-hidden="true">{option.icon}</div>
+        <div>
+          <div className="transport-option__label">{option.label}</div>
+          <div className="transport-option__sublabel">{option.sublabel}</div>
+        </div>
       </div>
 
-      {/* Web search badge — shown below assistant messages that used live data */}
-      {!isUser && usedWebSearch && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          fontSize: '10px',
-          color: colors.muted,
-          padding: '2px 8px',
-          borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(255,255,255,0.03)',
-        }}>
-          <span style={{ fontSize: '10px' }}>🔍</span>
-          <span>Searched the web</span>
+      <div className="transport-option__stats">
+        <div className="transport-option__stat">
+          <span className="transport-option__stat-label">Durée</span>
+          <span className="transport-option__stat-value">{option.duration}</span>
         </div>
+        <div className="transport-option__stat">
+          <span className="transport-option__stat-label">Coût famille</span>
+          <span className="transport-option__stat-value transport-option__stat-value--copper">
+            {option.cost} €
+          </span>
+        </div>
+        <div className="transport-option__stat">
+          <span className="transport-option__stat-label">CO₂ total</span>
+          <span className={`transport-option__stat-value transport-option__stat-value--${
+            option.co2 < 20 ? 'sage' : option.co2 < 100 ? 'copper' : 'terra'
+          }`}>
+            {option.co2} kg
+          </span>
+        </div>
+      </div>
+
+      <CarbonBar co2={option.co2} co2Max={option.co2Max} />
+    </div>
+  )
+}
+
+function TransportCard({ data, narrative }) {
+  const co2Max = Math.max(...data.options.map(o => o.co2))
+  return (
+    <div className="transport-card">
+      <div className="transport-card__header">
+        <span className="transport-card__route">{data.origin}</span>
+        <span className="transport-card__arrow">→</span>
+        <span className="transport-card__route">{data.destination}</span>
+        <span className="transport-card__meta">{data.passengers} personnes</span>
+      </div>
+      <div className="transport-card__options">
+        {data.options.map(opt => (
+          <TransportOption key={opt.id} option={opt} co2Max={co2Max} />
+        ))}
+      </div>
+      {narrative && (
+        <>
+          <div className="transport-card__divider" />
+          <div className="transport-card__narrative">
+            <ReactMarkdown>{narrative}</ReactMarkdown>
+          </div>
+        </>
       )}
     </div>
   )
 }
 
-// ─── Thinking / searching indicator ───────────────────────────────────────────
+// ─── Thinking dots ─────────────────────────────────────────────────────────────
 
-function ThinkingIndicator({ status }) {
-  // status: 'thinking' | 'searching'
-  const isSearching = status === 'searching'
-
+function ThinkingDots() {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '10px 14px',
-      background: '#1e1e20',
-      borderRadius: '12px',
-      borderBottomLeftRadius: '4px',
-      border: '1px solid rgba(255,255,255,0.06)',
-      width: 'fit-content',
-      transition: 'all 0.3s ease',
-    }}>
-      {isSearching ? (
-        // Searching state — pulsing globe
-        <>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            borderRadius: '50%',
-            background: 'rgba(0,255,136,0.15)',
-            border: '1.5px solid #00ff88',
-            animation: 'pulse 1.5s ease-in-out infinite',
-            flexShrink: 0,
-          }} />
-          <span style={{
-            fontSize: '12px',
-            color: '#00ff88',
-            fontFamily: 'monospace',
-            letterSpacing: '0.02em',
-          }}>
-            Searching the web...
-          </span>
-        </>
-      ) : (
-        // Thinking state — classic dots
-        <>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: '#6b6a65',
-              animation: `bounce 1.2s infinite ${i * 0.2}s`,
-            }} />
-          ))}
-        </>
+    <div className="thinking">
+      <span className="thinking__dot" />
+      <span className="thinking__dot" />
+      <span className="thinking__dot" />
+    </div>
+  )
+}
+
+// ─── Message ───────────────────────────────────────────────────────────────────
+
+function Message({ role, content, toolsUsed = [], cards = null }) {
+  const isUser = role === 'user'
+  return (
+    <div className="message">
+      <span className={`message__sender ${isUser ? 'message__sender--user' : ''}`}>
+        {isUser ? 'Vous' : 'Écotravel'}
+      </span>
+
+      {/* Transport card renders above the text bubble */}
+      {!isUser && cards?.type === 'transport' && (
+        <TransportCard data={cards} narrative={content} />
       )}
+
+      {/* Only render bubble if no cards */}
+      {(isUser || !cards) && (
+        <div className={`message__bubble ${isUser ? 'message__bubble--user' : 'message__bubble--assistant'}`}>
+          {isUser ? content : <ReactMarkdown>{content}</ReactMarkdown>}
+        </div>
+      )}
+
+      {!isUser && <ToolBadges toolsUsed={toolsUsed} />}
+    </div>
+  )
+}
+
+// ─── Session row ───────────────────────────────────────────────────────────────
+
+function SessionRow({ session, isActive, onSelect, onDelete }) {
+  return (
+    <div className={`session-row ${isActive ? 'session-row--active' : ''}`}>
+      <span className="session-row__icon">
+        <CategoryIcon title={session.title} />
+      </span>
+      <button className="session-row__btn" onClick={() => onSelect(session.session_id)}>
+        <div className="session-row__title">{session.title}</div>
+        <div className="session-row__date">
+          {new Date(session.started_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+        </div>
+      </button>
+      <button className="session-row__delete" onClick={() => onDelete(session.session_id)}>×</button>
     </div>
   )
 }
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
 
-function Sidebar({ sessions, activeSessionId, onSelect, onNew, onDelete }) {
+function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, collapsed, onToggle, usage, isOnline }) {
   return (
-    <div style={{
-      width: '220px',
-      background: '#111113',
-      borderRight: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-    }}>
-      <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button onClick={onNew} style={{
-          width: '100%',
-          background: colors.tomoroGreen,
-          border: 'none',
-          borderRadius: '8px',
-          padding: '8px 12px',
-          fontSize: '12px',
-          fontWeight: '500',
-          color: '#1a1535',
-          cursor: 'pointer',
-        }}>
-          + New conversation
+    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+      <div className="sidebar__header">
+        <div className="sidebar__title-row">
+          <h1 className="sidebar__title">Écotravel<br/>buddy</h1>
+          <button className="sidebar__toggle" onClick={onToggle} aria-label="Masquer">
+            <IconToggle />
+          </button>
+        </div>
+        <div className="sidebar__status">
+          <span className={`sidebar__dot ${isOnline ? 'sidebar__dot--online' : ''}`} />
+          <span className="sidebar__status-label">{isOnline ? 'En ligne' : 'Hors ligne'}</span>
+        </div>
+        <button className="sidebar__new-btn" onClick={onNew}>
+          <span className="sidebar__new-btn-icon">+</span>
+          Nouvelle conversation
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-        {sessions.length === 0 && (
-          <div style={{ fontSize: '11px', color: colors.muted, padding: '12px 8px' }}>
-            No past conversations yet
-          </div>
-        )}
-        {sessions.map(s => (
-          <div key={s.session_id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            borderRadius: '8px',
-            background: s.session_id === activeSessionId ? '#1e1e20' : 'transparent',
-            border: s.session_id === activeSessionId ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
-            marginBottom: '4px',
-            padding: '2px 4px',
-          }}>
-            <div
-              onClick={() => onSelect(s.session_id)}
-              style={{ flex: 1, padding: '6px 4px', cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: '11px', color: colors.text, lineHeight: '1.4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {s.title}
-              </div>
-              <div style={{ fontSize: '10px', color: colors.muted, marginTop: '2px' }}>
-                {new Date(s.started_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-              </div>
-            </div>
-            <button
-              onClick={() => onDelete(s.session_id)}
-              style={{ background: 'none', border: 'none', color: colors.muted, cursor: 'pointer', fontSize: '14px', padding: '4px', lineHeight: 1, flexShrink: 0 }}
-              title="Delete conversation"
-            >
-              ×
-            </button>
-          </div>
-        ))}
+
+      <div className="sidebar__section-label">Récents</div>
+
+      <div className="sidebar__sessions">
+        {sessions.length === 0
+          ? <p className="sidebar__empty">Aucune conversation</p>
+          : sessions.map(s => (
+              <SessionRow
+                key={s.session_id} session={s}
+                isActive={s.session_id === activeId}
+                onSelect={onSelect} onDelete={onDelete}
+              />
+            ))
+        }
       </div>
-    </div>
+
+      {usage && (
+        <div className="sidebar__footer">
+          <div className="sidebar__budget-label">API Budget</div>
+          <div>
+            <span className="sidebar__budget-amount">${usage.remaining.toFixed(3)}</span>
+            <span className="sidebar__budget-suffix"> restant</span>
+          </div>
+          <div className="sidebar__budget-count">
+            {usage.messages_count} message{usage.messages_count !== 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+    </aside>
   )
 }
 
-// ─── Main chat ─────────────────────────────────────────────────────────────────
+function CollapsedToggle({ onToggle }) {
+  return (
+    <button className="collapsed-toggle" onClick={onToggle} aria-label="Afficher la barre latérale">
+      <IconToggle />
+    </button>
+  )
+}
 
-function ChatInterface() {
+// ─── Main app ──────────────────────────────────────────────────────────────────
+
+export default function App() {
   const [sessionId, setSessionId] = useState(() => uuidv4())
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hi Geoffroy — how can I help you today?' }
-  ])
-  const [sessions, setSessions] = useState([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [thinkingStatus, setThinkingStatus] = useState('thinking') // 'thinking' | 'searching'
-  const [usage, setUsage] = useState(null)
-  const bottomRef = useRef(null)
-  const searchTimerRef = useRef(null)
-
-  const fetchUsage = async () => {
-    const res = await fetch(`${API}/usage`)
-    const data = await res.json()
-    setUsage(data)
-  }
+  const [messages, setMessages]   = useState([])
+  const [sessions, setSessions]   = useState([])
+  const [input, setInput]         = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [sidebarOpen, setSidebar] = useState(true)
+  const [usage, setUsage]         = useState(null)
+  const bottomRef                 = useRef(null)
+  const textareaRef               = useRef(null)
 
   const fetchSessions = async () => {
-    const res = await fetch(`${API}/sessions`)
-    const data = await res.json()
-    setSessions(data)
+    try { setSessions(await (await fetch(`${API_URL}/sessions`)).json()) } catch {}
+  }
+  const fetchUsage = async () => {
+    try { setUsage(await (await fetch(`${API_URL}/usage`)).json()) } catch {}
   }
 
-  useEffect(() => {
-    fetchUsage()
-    fetchSessions()
-  }, [])
+  useEffect(() => { fetchSessions(); fetchUsage() }, [])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
-
-  const startNewConversation = () => {
+  const newConversation = () => {
     setSessionId(uuidv4())
-    setMessages([{ role: 'assistant', content: 'Hi Geoffroy — how can I help you today?' }])
+    setMessages([])
+    textareaRef.current?.focus()
   }
 
   const loadSession = async (sid) => {
-    const res = await fetch(`${API}/sessions/${sid}`)
-    const data = await res.json()
+    const data = await (await fetch(`${API_URL}/sessions/${sid}`)).json()
     setSessionId(sid)
     setMessages([
-      { role: 'assistant', content: 'Hi Geoffroy — how can I help you today?' },
       ...data
     ])
   }
 
   const deleteSession = async (sid) => {
-    await fetch(`${API}/sessions/${sid}`, { method: 'DELETE' })
+    await fetch(`${API_URL}/sessions/${sid}`, { method: 'DELETE' })
     fetchSessions()
-    if (sid === sessionId) startNewConversation()
+    if (sid === sessionId) newConversation()
   }
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
-    const newMessage = { role: 'user', content: input }
-    setMessages(prev => [...prev, newMessage])
+    const userMsg = { role: 'user', content: input }
+    setMessages(prev => [...prev, userMsg])
     setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setLoading(true)
-    setThinkingStatus('thinking')
-
-    // After 2s with no reply, flip to "searching" state
-    searchTimerRef.current = setTimeout(() => {
-      setThinkingStatus('searching')
-    }, 2000)
 
     try {
-      const response = await fetch(`${API}/chat`, {
+      const res = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
-          messages: [...messages, newMessage]
+          messages: [...messages, userMsg].map(({ role, content }) => ({ role, content }))
         })
       })
-
-      if (!response.ok) throw new Error('API error')
-      const data = await response.json()
-      const reply = data.content[0].text
-      const usedWebSearch = data.used_web_search || false
-
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      const textBlocks = (data.content || []).filter(b => b.type === 'text')
+      const reply = textBlocks[textBlocks.length - 1]?.text || 'Désolé, je n\'ai pas pu répondre.'
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: reply,
-        usedWebSearch,
+        toolsUsed: data.tools_used || [],
+        cards: data.cards || null,
       }])
-
-      fetchUsage()
-      fetchSessions()
-    } catch (error) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Something went wrong — try again in a moment.',
-      }])
+      fetchUsage(); fetchSessions()
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Une erreur s\'est produite — réessayez dans un moment.' }])
     } finally {
-      clearTimeout(searchTimerRef.current)
       setLoading(false)
-      setThinkingStatus('thinking')
+      textareaRef.current?.focus()
     }
   }
 
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+  }
+
+  const sendActive = !loading && input.trim().length > 0
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0e0e0f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <style>{`
-        @keyframes bounce {
-          0%, 60%, 100% { transform: translateY(0); }
-          30% { transform: translateY(-4px); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.85); }
-        }
-        .prose h1, .prose h2, .prose h3 { font-size: 14px; font-weight: 600; margin: 4px 0; }
-        .prose p { margin: 4px 0; }
-        .prose ul { padding-left: 16px; margin: 4px 0; }
-        .prose li { margin: 2px 0; }
-        .prose strong { font-weight: 600; }
-      `}</style>
+    <div className="app">
+      <Sidebar
+        sessions={sessions} activeId={sessionId}
+        onSelect={loadSession} onNew={newConversation} onDelete={deleteSession}
+        collapsed={!sidebarOpen} onToggle={() => setSidebar(v => !v)}
+        usage={usage} isOnline={!loading}
+      />
 
-      <div style={{ display: 'flex', width: '820px', height: '620px', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0e0e0f' }}>
+      {!sidebarOpen && <CollapsedToggle onToggle={() => setSidebar(true)} />}
 
-        <Sidebar
-          sessions={sessions}
-          activeSessionId={sessionId}
-          onSelect={loadSession}
-          onNew={startNewConversation}
-          onDelete={deleteSession}
-        />
+      <main className={`chat ${!sidebarOpen ? 'chat--offset' : ''}`}>
+        <div className="chat__messages">
+          {messages.map((msg, i) => (
+            <Message
+              key={i} role={msg.role} content={msg.content}
+              toolsUsed={msg.toolsUsed} cards={msg.cards}
+            />
+          ))}
+          {loading && <ThinkingDots />}
+          <div ref={bottomRef} />
+        </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-
-          {/* Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: colors.tomoroGreen, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a1535' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M4 9.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm1 .5v3h6v-3h-1v.5a.5.5 0 0 1-1 0V10z"/>
-                <path d="M8 0a2 2 0 0 0-2 2H3.5a2 2 0 0 0-2 2v1c0 .52.198.993.523 1.349A.5.5 0 0 0 2 6.5V14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6.5a.5.5 0 0 0-.023-.151c.325-.356.523-.83.523-1.349V4a2 2 0 0 0-2-2H10a2 2 0 0 0-2-2m0 1a1 1 0 0 0-1 1h2a1 1 0 0 0-1-1M3 14V6.937q.24.062.5.063h4v.5a.5.5 0 0 0 1 0V7h4q.26 0 .5-.063V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1m9.5-11a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#e8e6e0' }}>Ecotravel advisor</div>
-              <div style={{ fontSize: '11px', color: loading ? '#00ff88' : '#5dcaa5', marginTop: '2px', transition: 'color 0.3s' }}>
-                {loading ? (thinkingStatus === 'searching' ? '● searching...' : '● thinking...') : '● online'}
-              </div>
-            </div>
-            <div style={{ marginLeft: 'auto', fontSize: '11px', color: colors.muted, fontFamily: 'monospace', textAlign: 'right' }}>
-              <div style={{ color: colors.tomoroGreen }}>
-                ${usage ? usage.remaining.toFixed(4) : '...'}
-                <span style={{ color: colors.muted }}> Remaining</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {messages.map((msg, i) => (
-              <Message key={i} role={msg.role} content={msg.content} usedWebSearch={msg.usedWebSearch} />
-            ))}
-            {loading && <ThinkingIndicator status={thinkingStatus} />}
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Input */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px' }}>
-            <input
-              style={{ flex: 1, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '9px 14px', fontSize: '13px', color: '#e8e6e0', outline: 'none', fontFamily: 'sans-serif' }}
+        <div className="chat__input-area">
+          <div className="input-bar">
+            <textarea
+              ref={textareaRef}
+              className="input-bar__textarea"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Hi Geoffroy, how can I help you today?..."
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="Posez une question, planifiez un voyage, trouvez une destination…"
               disabled={loading}
+              rows={1}
+              onInput={e => {
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+              }}
             />
             <button
-              style={{
-                background: loading ? 'rgba(0,255,136,0.4)' : colors.tomoroGreen,
-                border: 'none',
-                borderRadius: '10px',
-                padding: '9px 16px',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#1a1535',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s',
-              }}
+              className={`input-bar__send ${sendActive ? 'input-bar__send--active' : 'input-bar__send--disabled'}`}
               onClick={sendMessage}
-              disabled={loading}
+              disabled={!sendActive}
+              aria-label="Envoyer"
             >
-              {loading ? '...' : 'Send'}
+              →
             </button>
           </div>
-
+          <p className="input-bar__hint">Entrée pour envoyer · Shift+Entrée pour un saut de ligne</p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
-
-export default ChatInterface
