@@ -192,12 +192,24 @@ function TripMap({ stops }) {
       [stops[0].lat, stops[0].lng], 5
     )
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© CartoDB'
     }).addTo(map)
 
-    stops.forEach(stop => {
-      L.marker([stop.lat, stop.lng])
+    stops.forEach((stop, index) => {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width: 14px; height: 14px;
+          background: #C47457;
+          border: 2px solid #fff;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(196,116,87,0.4);
+        "></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      })
+      L.marker([stop.lat, stop.lng], { icon })
         .addTo(map)
         .bindPopup(stop.city)
     })

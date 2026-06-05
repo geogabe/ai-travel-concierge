@@ -735,6 +735,9 @@
     box-shadow: var(--neu-raised-lg);
     animation: fadeUp 0.3s ease forwards;
   }
+  .itinerary-card .leaflet-tile-pane {
+    filter: saturate(0.15) sepia(0.2) brightness(1.02);
+  }
 
 /* ============================================================
    UTILITIES
