@@ -79,6 +79,7 @@ const TOOL_META = {
   web_search:       { label: 'Web',     icon: '🔍' },
 }
 
+
 function ToolBadges({ toolsUsed = [] }) {
   const unique = [...new Set(toolsUsed)].filter(t => TOOL_META[t])
   if (!unique.length) return null
@@ -240,16 +241,19 @@ function ThinkingDots() {
 
 
 function ItineraryTimeline({ stops }) {
+  const categoryIcons = {
+    museum: '🏛', nature: '🌿', hiking: '🥾',
+    shopping: '🛍', food: '🍜', culture: '⛩',
+    park: '🌳', beach: '🏖', theme_park: '🎡'
+  }
+
   return (
     <div className="itinerary-timeline">
       {stops.map((stop, index) => (
         <div key={stop.city}>
-          {/* Transport leg from previous stop */}
           {stop.transport_from_previous && (
             <div className="itinerary-leg">
-              <span className="itinerary-leg__icon">
-                {stop.transport_from_previous.icon}
-              </span>
+              <span className="itinerary-leg__icon">{stop.transport_from_previous.icon}</span>
               <div className="itinerary-leg__details">
                 <div className="itinerary-leg__stat">
                   <span className="itinerary-leg__stat-value">{stop.transport_from_previous.duration}</span>
@@ -267,13 +271,10 @@ function ItineraryTimeline({ stops }) {
             </div>
           )}
 
-          {/* Stop card */}
           <div className="itinerary-stop">
             <div className="itinerary-stop__spine">
               <div className="itinerary-stop__dot" />
-              {index < stops.length - 1 && (
-                <div className="itinerary-stop__line" />
-              )}
+              {index < stops.length - 1 && <div className="itinerary-stop__line" />}
             </div>
             <div className="itinerary-stop__content">
               <div className="itinerary-stop__city">{stop.city}</div>
@@ -283,16 +284,33 @@ function ItineraryTimeline({ stops }) {
               <div className="itinerary-stop__details">
                 <div className="itinerary-stop__row">
                   <span className="itinerary-stop__row-label">Hébergement</span>
-                  <span>{stop.accommodation}</span>
+                  <span>
+                    {stop.accommodation}
+                    {stop.accommodation_cost && (
+                      <span style={{ color: 'var(--color-copper)', fontWeight: 600, marginLeft: '8px' }}>
+                        {stop.accommodation_cost} €
+                      </span>
+                    )}
+                  </span>
                 </div>
                 {stop.highlights?.length > 0 && (
                   <div className="itinerary-stop__row">
                     <span className="itinerary-stop__row-label">À voir</span>
                     <div className="itinerary-stop__highlights">
                       {stop.highlights.map(h => (
-                        <span key={h} className="itinerary-stop__highlight">{h}</span>
+                        <span key={h.name} className="itinerary-stop__highlight">
+                          {categoryIcons[h.category] || '📍'} {h.name}
+                        </span>
                       ))}
                     </div>
+                  </div>
+                )}
+                {stop.stop_budget && (
+                  <div className="itinerary-stop__row">
+                    <span className="itinerary-stop__row-label">Budget stop</span>
+                    <span style={{ color: 'var(--color-copper)', fontWeight: 600 }}>
+                      {stop.stop_budget} €
+                    </span>
                   </div>
                 )}
               </div>
