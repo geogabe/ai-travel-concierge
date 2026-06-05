@@ -250,7 +250,7 @@ function ItineraryTimeline({ stops }) {
   return (
     <div className="itinerary-timeline">
       {stops.map((stop, index) => (
-        <div key={stop.city}>
+       <div key={`${stop.city}-${index}`}>
           {stop.transport_from_previous && (
             <div className="itinerary-leg">
               <span className="itinerary-leg__icon">{stop.transport_from_previous.icon}</span>
@@ -305,7 +305,7 @@ function ItineraryTimeline({ stops }) {
                     </div>
                   </div>
                 )}
-                {stop.stop_budget && (
+                {stop.stop_budget > 0 && (
                   <div className="itinerary-stop__row">
                     <span className="itinerary-stop__row-label">Budget stop</span>
                     <span style={{ color: 'var(--color-copper)', fontWeight: 600 }}>
