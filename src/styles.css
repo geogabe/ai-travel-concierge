@@ -43,14 +43,14 @@
     --color-ink:              #2C2B1E;
     --color-ink-light:        #5a5847;
 
-    /* Neumorphic shadows — derived from Oyster */
+    /* Neumorphic shadows — derived from Oyster, lightened */
     --neu-light:   #ffffff;
-    --neu-dark:    #d4cfc6;
-    --neu-raised:  6px 6px 14px var(--neu-dark), -6px -6px 14px var(--neu-light);
-    --neu-inset:   inset 3px 3px 8px var(--neu-dark), inset -3px -3px 8px var(--neu-light);
-    --neu-raised-sm: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
-    --neu-raised-lg: 10px 10px 24px var(--neu-dark), -10px -10px 24px var(--neu-light);
-    --neu-pressed: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
+    --neu-dark:    #e2ddd6;          /* was #d4cfc6 — less contrast */
+    --neu-raised:     4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+    --neu-inset:      inset 2px 2px 6px var(--neu-dark), inset -2px -2px 6px var(--neu-light);
+    --neu-raised-sm:  2px 2px 6px var(--neu-dark), -2px -2px 6px var(--neu-light);
+    --neu-raised-lg:  6px 6px 16px var(--neu-dark), -6px -6px 16px var(--neu-light);
+    --neu-pressed:    inset 1px 1px 4px var(--neu-dark), inset -1px -1px 4px var(--neu-light);
 
     /* Typography */
     --font-title: 'Cormorant Garamond', Georgia, serif;
@@ -297,6 +297,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .session-row__title-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-sand);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--color-truffle);
+    padding: 2px 0;
+    outline: none;
+    width: 100%;
+  }
 
   .session-row--active .session-row__title { color: var(--color-ink); font-weight: var(--weight-semi); }
   .session-row__date   { font-size: 10px; color: var(--color-sage); margin-top: 1px; }
@@ -392,11 +404,15 @@
 
   .message__bubble--assistant {
     align-self: flex-start;
-    background-color: var(--color-oyster);
+    max-width: min(72%, 760px);
+    padding: var(--space-2) 0 var(--space-2) var(--space-5);
+    border-left: 2px solid var(--color-sand);
+    background: none;
+    box-shadow: none;
     color: var(--color-ink);
-    border-radius: var(--radius-lg);
-    border-bottom-left-radius: var(--space-2);
-    box-shadow: var(--neu-raised);
+    border-radius: 0;
+    font-size: var(--text-base);
+    line-height: var(--leading-loose);
   }
 
   .message__bubble--user {
@@ -454,12 +470,12 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: var(--space-4) var(--space-5);
-    background-color: var(--color-oyster);
-    border-radius: var(--radius-lg);
-    border-bottom-left-radius: var(--space-2);
-    box-shadow: var(--neu-raised);
+    padding: var(--space-2) var(--space-5);
+    background: none;
+    box-shadow: none;
     width: fit-content;
+    padding-left: var(--space-5);
+    border-left: 2px solid var(--color-sand-light);
   }
 
   .thinking__dot { width: 7px; height: 7px; border-radius: var(--radius-full); background-color: var(--color-sand); display: block; }
@@ -590,27 +606,32 @@
 
   /* Option card */
   .transport-option {
-    background-color: var(--color-oyster);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    box-shadow: var(--neu-raised-sm);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    position: relative;
-    transition: box-shadow var(--transition-fast);
-  }
+  background-color: var(--color-oyster);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  border: 1px solid var(--color-sand-light);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: relative;
+  transition: border-color var(--transition-fast);
+}
 
-  .transport-option:hover { box-shadow: var(--neu-raised); }
+.transport-option:hover {
+  border-color: var(--color-sand);
+  box-shadow: none;
+}
 
-  .transport-option--recommended {
-    box-shadow: var(--neu-inset);
-  }
+.transport-option--recommended {
+  border-color: var(--color-terracotta);
+  box-shadow: none;
+}
 
-  .transport-option--recommended:hover {
-    box-shadow: var(--neu-inset);
-  }
-
+.transport-option--recommended:hover {
+  border-color: var(--color-terracotta-dark);
+  box-shadow: none;
+}
   .transport-option__badge {
     position: absolute;
     top: var(--space-3);
@@ -779,28 +800,29 @@
   }
 
   .itinerary-stop__content {
-    background-color: var(--color-oyster);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    box-shadow: var(--neu-raised-sm);
-    margin-bottom: var(--space-3);
-  }
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: var(--space-2) 0 var(--space-5) 0;
+  margin-bottom: 0;
+}
 
-  .itinerary-stop__city {
-    font-family: var(--font-title);
-    font-style: italic;
-    font-size: var(--text-2xl);
-    font-weight: 500;
-    color: var(--color-ink);
-    line-height: var(--leading-tight);
-  }
+.itinerary-stop__city {
+  font-family: var(--font-title);
+  font-style: italic;
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  line-height: var(--leading-tight);
+}
 
-  .itinerary-stop__dates {
-    font-size: var(--text-sm);
-    color: var(--color-sage);
-    margin-top: 2px;
-    margin-bottom: var(--space-3);
-  }
+.itinerary-stop__dates {
+  font-size: var(--text-sm);
+  color: var(--color-sage);
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-4);
+  letter-spacing: 0.03em;
+}
 
   .itinerary-stop__details {
     display: flex;
@@ -836,10 +858,17 @@
   .itinerary-stop__highlight {
     font-size: var(--text-xs);
     color: var(--color-truffle);
-    background-color: var(--color-oyster);
+    background-color: var(--color-oyster-deep);
     border-radius: var(--radius-full);
     padding: 2px var(--space-3);
-    box-shadow: var(--neu-raised-sm);
+    box-shadow: none;
+  }
+  .itinerary-stop__highlight-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 4px;
+    opacity: 0.6;
   }
 
   .itinerary-leg {

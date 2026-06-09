@@ -12,9 +12,17 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function detectCategory(title = '') {
   const s = title.toLowerCase()
-  if (/hôtel|gîte|logement|chambre|accommodation|airbnb|homexchange|nuit/.test(s)) return 'accommodation'
-  if (/voyage|itinéraire|trip|planif|semaine|jours|circuit/.test(s)) return 'trip'
-  if (/destination|où|partir|visiter|découvrir/.test(s)) return 'destination'
+
+  if (/hôtel|hotel|gîte|gite|logement|chambre|airbnb|homexchange|camping|auberge|lodge|ryokan|hostel|appartement|apartment/.test(s)) return 'accommodation'
+
+  if (/budget|€|euro|coût|cost|prix|price|cher|cheap|économi/.test(s)) return 'budget'
+
+  if (/train|trajet|tgv|sncf|rail|bus|voiture|driving|road|transport|car|route|autoroute|ferry|flight|vol/.test(s)) return 'transport'
+
+  if (/trip|itinéraire|itinerary|voyage|planif|semaine|jours|days|circuit|tour|séjour|week|nuits|nights|family|famille/.test(s)) return 'trip'
+
+  if (/destination|où|partir|visiter|découvrir|explore|exploring|guide|weekend|escapade|getaway|côte|coast|mountain|montagne/.test(s)) return 'destination'
+
   return 'default'
 }
 
@@ -61,12 +69,31 @@ function IconDefault() {
     </svg>
   )
 }
+function IconTransport() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/>
+    </svg>
+  )
+}
+
+function IconBudget() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v1m0 8v1M9.5 9.5a2.5 2.5 0 0 1 5 0c0 1.5-1 2-2.5 2.5S9.5 13.5 9.5 15a2.5 2.5 0 0 0 5 0"/>
+    </svg>
+  )
+}
+
 
 function CategoryIcon({ title }) {
   const cat = detectCategory(title)
-  if (cat === 'destination')   return <IconDestination />
-  if (cat === 'trip')          return <IconTrip />
   if (cat === 'accommodation') return <IconAccommodation />
+  if (cat === 'trip')          return <IconTrip />
+  if (cat === 'destination')   return <IconDestination />
+  if (cat === 'transport')     return <IconTransport />
+  if (cat === 'budget')        return <IconBudget />
   return <IconDefault />
 }
 
@@ -241,10 +268,17 @@ function ThinkingDots() {
 
 
 function ItineraryTimeline({ stops }) {
+  console.log('stops:', JSON.stringify(stops[0]?.highlights, null, 2))
   const categoryIcons = {
-    museum: '🏛', nature: '🌿', hiking: '🥾',
-    shopping: '🛍', food: '🍜', culture: '⛩',
-    park: '🌳', beach: '🏖', theme_park: '🎡'
+    museum:     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M3 10h18M12 3L3 10h18L12 3z"/><path d="M7 10v11M11 10v11M13 10v11M17 10v11"/></svg>,
+    nature:     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12"/><path d="M5 12C5 7 8 4 12 3c4 1 7 4 7 9-2 0-4-1-7-3-3 2-5 3-7 3z"/></svg>,
+    hiking:     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 20l4-8 3 4 3-6 4 10"/><path d="M3 20h18"/></svg>,
+    shopping:   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>,
+    food:       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><path d="M6 2v4M10 2v4M14 2v4"/></svg>,
+    culture:    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>,
+    park:       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22v-7"/><path d="M9 9c0-3 1.5-6 3-7 1.5 1 3 4 3 7a3 3 0 0 1-6 0z"/><path d="M6 14c0-2 1-4 2-5 1 1 2 3 2 5a2 2 0 0 1-4 0z"/><path d="M14 14c0-2 1-4 2-5 1 1 2 3 2 5a2 2 0 0 1-4 0z"/></svg>,
+    beach:      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 12a5 5 0 0 0-10 0"/><path d="M12 7V3"/><path d="M5 15H2M22 15h-3M5.6 9.4 3.5 7.3M20.5 7.3l-2.1 2.1M2 19c2 0 4-1 6-1s4 1 6 1 4-1 6-1"/></svg>,
+    theme_park: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/><path d="M12 12L6 9"/></svg>,
   }
 
   return (
@@ -297,9 +331,12 @@ function ItineraryTimeline({ stops }) {
                   <div className="itinerary-stop__row">
                     <span className="itinerary-stop__row-label">À voir</span>
                     <div className="itinerary-stop__highlights">
-                      {stop.highlights.map(h => (
-                        <span key={h.name} className="itinerary-stop__highlight">
-                          {categoryIcons[h.category] || '📍'} {h.name}
+                      {stop.highlights.map((h, i) => (
+                          <span key={`${h.name}-${i}`} className="itinerary-stop__highlight">
+                          <span className="itinerary-stop__highlight-icon">
+                            {categoryIcons[h.category] || <IconDestination />}
+                          </span>
+                          {h.name}
                         </span>
                       ))}
                     </div>
@@ -376,18 +413,61 @@ function ItineraryCard({ data, narrative }) {
 
 // ─── Session row ───────────────────────────────────────────────────────────────
 
-function SessionRow({ session, isActive, onSelect, onDelete }) {
+function SessionRow({ session, isActive, onSelect, onDelete, onRename }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(session.title)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  const startEdit = (e) => {
+    e.stopPropagation() // don't trigger onSelect
+    setDraft(session.title)
+    setEditing(true)
+  }
+
+  const commitEdit = () => {
+    setEditing(false)
+    const trimmed = draft.trim()
+    if (trimmed && trimmed !== session.title) {
+      onRename(session.session_id, trimmed)
+    } else {
+      setDraft(session.title) // revert if empty or unchanged
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') commitEdit()
+    if (e.key === 'Escape') { setDraft(session.title); setEditing(false) }
+  }
+
   return (
     <div className={`session-row ${isActive ? 'session-row--active' : ''}`}>
       <span className="session-row__icon">
         <CategoryIcon title={session.title} />
       </span>
-      <button className="session-row__btn" onClick={() => onSelect(session.session_id)}>
-        <div className="session-row__title">{session.title}</div>
-        <div className="session-row__date">
-          {new Date(session.started_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-        </div>
-      </button>
+
+      {editing ? (
+        // Edit mode — full-width input replaces the button
+        <input
+          ref={inputRef}
+          className="session-row__title-input"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+        />
+      ) : (
+        <button className="session-row__btn" onClick={() => onSelect(session.session_id)}>
+          <div className="session-row__title" onDoubleClick={startEdit}>{session.title}</div>
+          <div className="session-row__date">
+            {new Date(session.started_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+          </div>
+        </button>
+      )}
+
       <button className="session-row__delete" onClick={() => onDelete(session.session_id)}>×</button>
     </div>
   )
@@ -395,7 +475,7 @@ function SessionRow({ session, isActive, onSelect, onDelete }) {
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
 
-function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, collapsed, onToggle, usage, isOnline }) {
+function Sidebar({ sessions, activeId, onSelect, onNew, onRename, onDelete, collapsed, onToggle, usage, isOnline }) {
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
       <div className="sidebar__header">
@@ -424,7 +504,7 @@ function Sidebar({ sessions, activeId, onSelect, onNew, onDelete, collapsed, onT
               <SessionRow
                 key={s.session_id} session={s}
                 isActive={s.session_id === activeId}
-                onSelect={onSelect} onDelete={onDelete}
+                onSelect={onSelect} onDelete={onDelete} onRename={onRename}
               />
             ))
         }
@@ -453,6 +533,8 @@ function CollapsedToggle({ onToggle }) {
     </button>
   )
 }
+
+// ─── Main app ──────────────────────────────────────────────────────────────────
 
 // ─── Main app ──────────────────────────────────────────────────────────────────
 
@@ -486,15 +568,25 @@ export default function App() {
   const loadSession = async (sid) => {
     const data = await (await fetch(`${API_URL}/sessions/${sid}`)).json()
     setSessionId(sid)
-    setMessages([
-      ...data
-    ])
+    setMessages([...data])
   }
 
   const deleteSession = async (sid) => {
+    const confirmed = window.confirm('Are you sure you want to delete this conversation?')
+    if (!confirmed) return
     await fetch(`${API_URL}/sessions/${sid}`, { method: 'DELETE' })
     fetchSessions()
     if (sid === sessionId) newConversation()
+  }
+    const renameSession = async (sessionId, newTitle) => {
+    setSessions(prev => prev.map(s =>
+      s.session_id === sessionId ? { ...s, title: newTitle } : s
+    ))
+    await fetch(`${API_URL}/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTitle })
+    })
   }
 
   const sendMessage = async () => {
@@ -525,7 +617,9 @@ export default function App() {
         cards: data.cards || null,
         itinerary: data.itinerary || null,
       }])
-      fetchUsage(); fetchSessions()
+      fetchUsage()
+      fetchSessions()
+      setTimeout(() => fetchSessions(), 6000)
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Une erreur s\'est produite — réessayez dans un moment.' }])
     } finally {
@@ -542,14 +636,21 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar
-        sessions={sessions} activeId={sessionId}
-        onSelect={loadSession} onNew={newConversation} onDelete={deleteSession}
-        collapsed={!sidebarOpen} onToggle={() => setSidebar(v => !v)}
-        usage={usage} isOnline={!loading}
-      />
-
-      {!sidebarOpen && <CollapsedToggle onToggle={() => setSidebar(true)} />}
+      {sidebarOpen
+        ? <Sidebar
+            sessions={sessions}
+            activeId={sessionId}
+            onSelect={loadSession}
+            onNew={newConversation}
+            onDelete={deleteSession}
+            onRename={renameSession}
+            collapsed={false}
+            onToggle={() => setSidebar(false)}
+            usage={usage}
+            isOnline={true}
+          />
+        : <CollapsedToggle onToggle={() => setSidebar(true)} />
+      }
 
       <main className={`chat ${!sidebarOpen ? 'chat--offset' : ''}`}>
         <div className="chat__messages">
