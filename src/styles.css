@@ -445,6 +445,23 @@
     flex-wrap: wrap;
     margin-top: var(--space-2);
   }
+  .message__edit-btn {
+  align-self: flex-end;
+  color: var(--color-sand);
+  padding: 2px 4px;
+  margin-top: 4px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.message:hover .message__edit-btn {
+  opacity: 1;
+}
+
+.message__edit-btn:hover {
+  color: var(--color-terracotta);
+}
 
   /* ----------------------------------------------------------
      TOOL BADGE

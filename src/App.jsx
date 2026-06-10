@@ -360,7 +360,7 @@ function ItineraryTimeline({ stops }) {
 
 // ─── Message ───────────────────────────────────────────────────────────────────
 
-function Message({ role, content, toolsUsed = [], cards = null, itinerary = null }) {
+function Message({ role, content, toolsUsed = [], cards = null, itinerary = null, onEdit }) {
   const isUser = role === 'user'
   return (
     <div className="message">
@@ -368,7 +368,6 @@ function Message({ role, content, toolsUsed = [], cards = null, itinerary = null
         {isUser ? 'Vous' : 'Écotravel'}
       </span>
 
-      {/* Transport card renders above the text bubble */}
       {!isUser && cards?.type === 'transport' && (
         <TransportCard data={cards} narrative={content} />
       )}
@@ -377,16 +376,23 @@ function Message({ role, content, toolsUsed = [], cards = null, itinerary = null
         <ItineraryCard data={itinerary} narrative={content} />
       )}
 
-      {/* Only render bubble if no cards */}
       {(isUser || (!cards && !itinerary)) && (
         <div className={`message__bubble ${isUser ? 'message__bubble--user' : 'message__bubble--assistant'}`}>
           {isUser ? content : <ReactMarkdown>{content}</ReactMarkdown>}
         </div>
       )}
 
-      {!isUser && <ToolBadges toolsUsed={toolsUsed} />}
+      {/* Icône édition — uniquement sous les messages utilisateur */}
+      {isUser && onEdit && (
+        <button className="message__edit-btn" onClick={() => onEdit(content)} aria-label="Éditer">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+      )}
 
-      
+      {!isUser && <ToolBadges toolsUsed={toolsUsed} />}
     </div>
   )
 }
@@ -580,6 +586,11 @@ export default function App() {
     abortControllerRef.current?.abort()
     setLoading(false)
   }
+  const editMessage = (content) => {
+    stopMessage()           // stoppe l'agent si en cours
+    setInput(content)       // remet le texte dans l'input
+    textareaRef.current?.focus()
+  }
     const renameSession = async (sessionId, newTitle) => {
     setSessions(prev => prev.map(s =>
       s.session_id === sessionId ? { ...s, title: newTitle } : s
@@ -662,7 +673,15 @@ export default function App() {
       <main className={`chat ${!sidebarOpen ? 'chat--offset' : ''}`}>
         <div className="chat__messages">
           {messages.map((msg, i) => (
-            <Message key={i} role={msg.role} content={msg.content} toolsUsed={msg.toolsUsed} cards={msg.cards} itinerary={msg.itinerary} />
+            <Message
+              key={i}
+              role={msg.role}
+              content={msg.content}
+              toolsUsed={msg.toolsUsed}
+              cards={msg.cards}
+              itinerary={msg.itinerary}
+              onEdit={editMessage}
+            />
           ))}
           {loading && <ThinkingDots />}
           <div ref={bottomRef} />
