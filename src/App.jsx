@@ -268,7 +268,6 @@ function ThinkingDots() {
 
 
 function ItineraryTimeline({ stops }) {
-  console.log('stops:', JSON.stringify(stops[0]?.highlights, null, 2))
   const categoryIcons = {
     museum:     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M3 10h18M12 3L3 10h18L12 3z"/><path d="M7 10v11M11 10v11M13 10v11M17 10v11"/></svg>,
     nature:     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V12"/><path d="M5 12C5 7 8 4 12 3c4 1 7 4 7 9-2 0-4-1-7-3-3 2-5 3-7 3z"/></svg>,
@@ -546,6 +545,7 @@ export default function App() {
   const [usage, setUsage]         = useState(null)
   const bottomRef                 = useRef(null)
   const textareaRef               = useRef(null)
+  const abortControllerRef = useRef(null)
 
   const fetchSessions = async () => {
     try { setSessions(await (await fetch(`${API_URL}/sessions`)).json()) } catch {}
@@ -576,6 +576,10 @@ export default function App() {
     fetchSessions()
     if (sid === sessionId) newConversation()
   }
+  const stopMessage = () => {
+    abortControllerRef.current?.abort()
+    setLoading(false)
+  }
     const renameSession = async (sessionId, newTitle) => {
     setSessions(prev => prev.map(s =>
       s.session_id === sessionId ? { ...s, title: newTitle } : s
@@ -596,14 +600,16 @@ export default function App() {
     setLoading(true)
 
     try {
+      abortControllerRef.current = new AbortController()
+
       const res = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
           messages: [...messages, userMsg].map(({ role, content }) => ({ role, content }))
-          signal: AbortSignal.timeout(120000) // 2 minutes — enough for Render cold start
-        })
+        }),
+        signal: abortControllerRef.current.signal
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -619,7 +625,8 @@ export default function App() {
       fetchUsage()
       fetchSessions()
       setTimeout(() => fetchSessions(), 6000)
-    } catch {
+    } catch (err) {
+      if (err.name === 'AbortError') return // ← silent, user cancelled
       setMessages(prev => [...prev, { role: 'assistant', content: 'Une erreur s\'est produite — réessayez dans un moment.' }])
     } finally {
       setLoading(false)
@@ -633,6 +640,7 @@ export default function App() {
 
   const sendActive = !loading && input.trim().length > 0
 
+  
   return (
     <div className="app">
       {sidebarOpen
@@ -676,14 +684,19 @@ export default function App() {
                 e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
               }}
             />
-            <button
-              className={`input-bar__send ${sendActive ? 'input-bar__send--active' : 'input-bar__send--disabled'}`}
-              onClick={sendMessage}
-              disabled={!sendActive}
-              aria-label="Envoyer"
-            >
-              →
-            </button>
+            {loading
+              ? <button className="input-bar__send input-bar__send--active" onClick={stopMessage} aria-label="Arrêter">
+                  ■
+                </button>
+              : <button
+                  className={`input-bar__send ${sendActive ? 'input-bar__send--active' : 'input-bar__send--disabled'}`}
+                  onClick={sendMessage}
+                  disabled={!sendActive}
+                  aria-label="Envoyer"
+                >
+                  →
+                </button>
+            }
           </div>
           <p className="input-bar__hint">Entrée pour envoyer · Shift+Entrée pour un saut de ligne</p>
         </div>
