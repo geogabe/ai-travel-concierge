@@ -536,8 +536,6 @@ function CollapsedToggle({ onToggle }) {
 
 // ─── Main app ──────────────────────────────────────────────────────────────────
 
-// ─── Main app ──────────────────────────────────────────────────────────────────
-
 export default function App() {
   const [sessionId, setSessionId] = useState(() => uuidv4())
   const [messages, setMessages]   = useState([])
@@ -604,6 +602,7 @@ export default function App() {
         body: JSON.stringify({
           session_id: sessionId,
           messages: [...messages, userMsg].map(({ role, content }) => ({ role, content }))
+          signal: AbortSignal.timeout(120000) // 2 minutes — enough for Render cold start
         })
       })
       if (!res.ok) throw new Error()
